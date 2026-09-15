@@ -120,5 +120,7 @@ El uso de IA estuvo enfocado principalmente en:
 
 La implementación final de la adaptación del código, pruebas y validación del funcionamiento fueron realizadas y entendidas mediante se fue desarrollando el laboratorio.
 
+- Se uso completamente IA para la función "prueba_merkle" y "verificar_prueba" entendiaendo de manera clara su funcionamiento
+
 ## Conclusión
 La solución permite verificar la integridad y pertenencia de datos individuales dentro de un conjunto grande, sin necesidad de recorrer ni almacenar todos los datos al momento de la verificación. Este enfoque es similar al empleado en sistemas de blockchain y en la sincronización eficiente de grandes volúmenes de datos, donde basta con comparar una raíz de hash para detectar cambios.

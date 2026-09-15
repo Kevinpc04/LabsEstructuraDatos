@@ -141,16 +141,6 @@ def verificar_prueba(dato, prueba, raiz_original):
     return hash_actual == raiz_original
  
 if __name__ == "__main__":
-    # ------------------------------------------------------------
-    # Experimento de laboratorio: construir un árbol de Merkle con
-    # 5 transacciones de ejemplo, generar una prueba de inclusión
-    # para una de ellas y verificar que:
-    #   a) el dato original pasa la verificación correctamente.
-    #   b) un dato alterado (aunque use la misma prueba) NO pasa la
-    #      verificación, demostrando la sensibilidad del hash ante
-    #      cualquier cambio en el contenido.
-    # ------------------------------------------------------------
- 
     bloques = [
         "Transaccion 1: compra cafe",
         "Transaccion 2: pago factura",
@@ -198,3 +188,20 @@ if __name__ == "__main__":
  
     print("\nVALIDACION DATO ALTERADO:")
     print(invalido)
+    print("\nCAMBIO DE BLOQUE Y NUEVA RAIZ")
+
+    raiz_original = raiz.hash
+
+    bloques_modificados = bloques.copy()
+
+    bloques_modificados[2] = ("Transaccion 3: transferencia 999999")
+
+    hojas_nuevas = crear_hojas(bloques_modificados)
+
+    raiz_nueva = crear_arbol(hojas_nuevas)
+    print("\nRaiz original:")
+    print(raiz_original)
+    print("\nRaiz modificada:")
+    print(raiz_nueva.hash)
+    print("\n¿La raiz cambio?")
+    print(raiz_original != raiz_nueva.hash)
