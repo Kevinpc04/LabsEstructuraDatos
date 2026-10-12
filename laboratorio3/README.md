@@ -84,7 +84,7 @@ Detalles de implementación (todos iterativos, sin recursión, para soportar ár
 | N, búsqueda y rango (ordenado) | 1.000, 2.000, 4.000, 8.000, 16.000 | Con IDs ordenados la **construcción** del ABB es O(N²): medido, 16.000 tarda ~19,7 s por construcción; 50.000 sería ~2,5 min y 1.000.000 **~32 horas** (proyección con la pendiente medida). Se corta en 16.000 y se extrapola. |
 | N, construcción aleatoria | 10.000, 100.000, 1.000.000 | Aquí sí se puede llegar a un millón: el ABB con IDs aleatorios queda balanceado. |
 | Repeticiones por punto | 100 (objetivos **distintos**) en búsqueda/rango; 100/20/3 y 50/25/10/3 en construcción | ≥100 como pide el enunciado; se baja en N grandes porque cada construcción tarda segundos/ minutos y el tiempo total sería inviable (queda reportado en cada fila del CSV). |
-| Búsquedas por punto | 100 IDs distintos, los mismos para las 3 estructuras | Cada búsqueda se cronometra **por separado** (no un promedio de lote). |
+| **M**, búsquedas por punto | M = 100 IDs distintos, los mismos para las 3 estructuras | Cada búsqueda se cronometra **por separado** (no un promedio de lote). M queda fijo; se reporta en el informe y en cada fila del CSV, pero no se varió como eje (ver §8). |
 | Rango fijo | R = 100 registros | Aisla el efecto de la estructura: el costo de devolver siempre lo mismo. |
 | Rango proporcional | R = 1% de N | Muestra qué pasa cuando el resultado crece con N. |
 | Cardinalidad de rango | Cada ventana devuelve **exactamente** R registros | Si el tamaño del rango variara, cada estructura mediría una consulta distinta y la comparación no sería válida. |
@@ -125,6 +125,8 @@ Para cada punto (experimento, escenario, N, estructura) se guardan en el CSV: **
 
 - **Comparación con la teoría:** regresión log(t) = a + b·log(N). La pendiente **b** estima el exponente real: b ≈ 1 → O(N); b ≈ 2 → O(N²); b pequeño → O(log N) u O(1). Se calcula con la media y con la mediana; si ambas coinciden (|Δb| < 0,15), la conclusión no depende de un punto ruidoso. Cada regresión reporta su **R²**.
 - **Gráficas:** puntos = media, barras = ±1 desviación estándar; la leyenda muestra b y R² de cada curva.
+- **Tratamiento de valores atípicos:** no se descartó ninguna muestra. En su lugar: (1) se resta el piso del cronómetro antes de resumir (elimina el sesgo fijo, no valores extremos); (2) cada punto conserva **mediana, mínimo y máximo** junto a la media, de modo que cualquier muestra ruidosa queda visible en `resultados.csv`; (3) toda regresión se calcula **dos veces**, con la media y con la mediana, y se marca como *discordante* cuando |Δb| ≥ 0,15 — eso detecta si un punto extremo está tirando de la tendencia; (4) las filas con R² < 0,9 o con discordancia se reportan como **ruidosas** en §5.5 y en ellas solo se sostiene la tendencia cualitativa, no el valor exacto de b; (5) las barras de ±1 desviación estándar en las gráficas hacen visible la dispersión de cada punto.
+- **Correlación altura–tiempo:** coeficiente de Pearson r entre las columnas `altura` y `media_s` de `resultados.csv` por estructura (5 puntos cada una), para relacionar la altura medida con el tiempo de búsqueda (ver §6).
 
 ## 5. Resultados
 
@@ -280,6 +282,18 @@ b de `log(t) = a + b·log(N)`; referencia: **O(N) → 1**, **O(N²) → 2**, **O
 | **B+** | Mejor búsqueda y mejor rango; **robusta al orden de inserción**; rango con R fijo casi constante | Construcción más lenta que la lista (splits); memoria intermedia (+26 MB) |
 
 **Alturas medidas:** ABB aleatorio de 22 (N = 1.000) a 38 (N = 100.000), entre **2,2 y 2,3 veces** log₂(N) — la altura probabilística teórica de un ABB insertado al azar es ~2×log₂(N), así que coincide. El B+ tiene 3–4 niveles, acorde a log₃₂(N) (≈2,1–2,8 teórico + redondeo). El ABB ordenado tiene altura = N.
+
+**¿Qué relación existe entre la altura del árbol y el tiempo de búsqueda?** Medida con la correlación de Pearson r entre `altura` y `media_s` de `resultados.csv` (5 puntos por estructura):
+
+| Estructura | r (altura, tiempo) | Lectura |
+|---|---:|---|
+| ABB, IDs aleatorios | 0,77 | La altura explica la tendencia, pero el costo por nivel **no** es constante: va de 57 ns/nivel (N = 1.000) a 309 ns/nivel (N = 100.000) — al crecer, cada nivel ya no cabe en caché. |
+| ABB, IDs ordenados | 0,90 | Relación casi exacta: el tiempo ≈ altura × costo por nivel, y ese costo se mantiene en ~118–120 ns por nivel en los dos N grandes (81–298 ns en los intermedios, con puntos ruidosos). Es la imagen más clara de "tiempo lineal porque la altura es N". |
+| B+ | 0,78 | Poco concluyente: la altura solo salta de 3 a 4, mientras el tiempo crece 5,8× (0,64 → 3,71 µs). Aquí el tiempo **no** lo explica la altura sino el tamaño del conjunto que hay que recorrer dentro de los nodos y el efecto de caché al crecer N. |
+
+Conclusión: para el ABB degenerado la altura *es* el tiempo; para los árboles balanceados la altura crece muy despacio y el tiempo lo dominan los costos por paso y la caché, no el número de niveles.
+
+**¿Existen costos constantes que igualen a algoritmos de distinta complejidad en N pequeño?** Sí, y limitan la comparación. Primero, el propio reloj: su piso medido es 100 ns, el mismo orden de magnitud que la mitad de una búsqueda del B+ en N = 1.000 (0,637 µs), por eso se resta. Segundo, la llamada al método, las comparaciones por clave y el `bisect` interno del B+ son constantes iguales para las tres estructuras y pesan proporcionalmente más cuando la operación dura < 1 µs. Se ve en los datos: en N = 1.000 la búsqueda del ABB (1,25 µs) y la del B+ (0,637 µs) difieren solo 2×, pese a que a N = 100.000 la brecha entre la lista y el B+ ya es de 3.213×. Las complejidades se separan con N; en entradas pequeñas los términos constantes (y el ruido de medición) pueden tapar la diferencia.
 
 ## 7. Hallazgos principales
 
