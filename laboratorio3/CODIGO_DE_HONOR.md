@@ -18,3 +18,4 @@ Durante el desarrollo del trabajo utilicé Claude (Anthropic) como apoyo para:
   (repeticiones, media/mediana/desviación, pendientes por regresión log-log
   con R², concordancia media–mediana y correlación de Pearson).
 - Apoyo la redacción del README.
+- Creación de todas las graficas entiendo lo que me presentan cada una
