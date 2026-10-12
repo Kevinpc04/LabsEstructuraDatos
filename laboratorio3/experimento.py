@@ -21,10 +21,10 @@ FRACCION_RANGO = 0.01           # R proporcional = 1% de N
 RANGO_FIJO = 100                # R constante, para aislar el efecto de la estructura
 ESCENARIOS_RANGO = (("rango_fijo", RANGO_FIJO), ("rango_prop", None))  # None = 1% de N
 
-# Busqueda con insercion aleatoria: los N que pidio el enunciado.
+# Busqueda con insercion aleatoria.
 N_BUSQ_ALEATORIA = (1_000, 5_000, 10_000, 50_000, 100_000)
 # Busqueda con insercion ORDENADA. el ABB aqui se convierte en una lista enlazada
-# y su construccion es O(N^2). Medido: 16k tardan ~29 s, 50k ~4.7 min, 1M ~31 horas.
+# y su construccion es O(N^2). Medido: 16k tardan ~19 s, 50k ~4.7 min, 1M ~32 horas.
 # Por eso este escenario usa duplicaciones exactas hasta 16k y se extrapola despues.
 N_BUSQ_ORDENADA = (1_000, 2_000, 4_000, 8_000, 16_000)
 
