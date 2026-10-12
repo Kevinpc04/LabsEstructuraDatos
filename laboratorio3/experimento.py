@@ -23,7 +23,7 @@ ESCENARIOS_RANGO = (("rango_fijo", RANGO_FIJO), ("rango_prop", None))  # None = 
 
 # Busqueda con insercion aleatoria: los N que pidio el enunciado.
 N_BUSQ_ALEATORIA = (1_000, 5_000, 10_000, 50_000, 100_000)
-# Busqueda con insercion ORDENADA. Ojo: el ABB aqui se convierte en una lista enlazada
+# Busqueda con insercion ORDENADA. el ABB aqui se convierte en una lista enlazada
 # y su construccion es O(N^2). Medido: 16k tardan ~29 s, 50k ~4.7 min, 1M ~31 horas.
 # Por eso este escenario usa duplicaciones exactas hasta 16k y se extrapola despues.
 N_BUSQ_ORDENADA = (1_000, 2_000, 4_000, 8_000, 16_000)
@@ -89,10 +89,8 @@ def unidades(v):
     return f"{v*1e6:.3f} us" if v < 1e-3 else (f"{v*1e3:.3f} ms" if v < 1 else f"{v:.4f} s")
 
 
-# ---------- Verificacion: como sabemos que las 3 estructuras funcionan ----------
+# ---------- Verificacion ----------
 def verificar(est, datos, etiqueta, ref=None):
-    """Correctitud contra una verdad de referencia calculada de forma independiente.
-    Se ejecuta ANTES de medir y FUERA del cronometro. Si algo esta mal, truena aqui."""
     ref = ref or sorted(datos, key=lambda e: e["id"])
     ref_ids = [e["id"] for e in ref]
     n = len(ref)
@@ -221,7 +219,7 @@ def exp_construccion(ordenado, rng):
 
 # ---------- Experimento 4: memoria (todo en RAM) ----------
 def exp_memoria(n, rng):
-    """Mide lo que CADA estructura anade encima del dataset. El dataset en si se mide
+    """Mide lo que CADA estructura añade encima del dataset. El dataset en si se mide
     aparte como linea base, porque los dict de los estudiantes ya existen antes de
     construir el arbol y si no se separaran las dos cosas."""
     filas = []
