@@ -1,19 +1,5 @@
 """
 EXPERIMENTO DE RENDIMIENTO - Parte 2 (Lista vs ABB vs Arbol B+)
-
-Disciplina de medicion (los 6 puntos metodologicos del enunciado):
-  1. >=100 repeticiones por punto, y sobre 100 objetivos DISTINTOS: se guarda el tiempo
-     de cada busqueda por separado, no un promedio de un lote.
-  2. Se reportan media y desviacion estandar de esas repeticiones.
-  3. Se prueba con varios volumenes N. El rango de cada escenario esta justificado con
-     medicion propia, no estimado a ojo (ver mas abajo el corte del ABB degenerado).
-  4. Durante la medicion NO hay print(), NO hay escritura a disco y el recolector de
-     basura esta DESACTIVADO, porque sus pausas meterian ruido en los tiempos.
-     La generacion de datos y la construccion de las estructuras quedan FUERA del
-     cronometro: el tiempo de construir se mide en un experimento aparte.
-  5. Se mide el piso del cronometro: un tiempo menor que ese no es del algoritmo,
-     es ruido del instrumento.
-  6. Se documenta el entorno (version, hardware, semilla, fecha) al final.
 """
 import csv
 import gc
