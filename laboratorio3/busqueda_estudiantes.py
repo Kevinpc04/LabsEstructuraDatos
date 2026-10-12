@@ -21,12 +21,10 @@ class ListaEstudiantes:
         return None
     def listar(self): return sorted(self.datos, key=lambda e: e["id"])  # O(n log n)
     def buscar_rango(self, lo, hi):
-        # Una lista no tiene orden interno: hay que recorrer TODO y ordenar lo encontrado.
         # O(N + R log R). Es el mejor caso posible para una lista (escaneo optimizable).
         return sorted((e for e in self.datos if lo <= e["id"] <= hi), key=lambda e: e["id"])
 
-# ---------- 2. ABB (todo iterativo: con IDs ordenados degenera en cadena
-# de 10,000 nodos y la recursión rompería el límite de Python) ----------
+# ---------- 2. ABB (todo iterativo) ----------
 class NodoABB:
     __slots__ = ("est", "izq", "der")
     def __init__(self, est): self.est, self.izq, self.der = est, None, None
@@ -57,10 +55,6 @@ class ABB:
             n = pila.pop(); res.append(n.est); n = n.der
         return res
     def buscar_rango(self, lo, hi):
-        # Inorden podado: si el nodo es < lo todo su subarbol izquierdo tambien lo es,
-        # asi que se salta de una vez. Al primer nodo > hi se detiene (inorden es ordenado).
-        # O(altura + R). Es ITERATIVO a proposito: si el arbol degenero, la altura es O(N)
-        # y la recursion reventaria el limite de llamadas de Python.
         res, pila, n = [], [], self.raiz
         while True:
             while n:
@@ -71,9 +65,6 @@ class ABB:
             if n.est["id"] > hi: return res
             res.append(n.est); n = n.der
     def altura(self):
-        # OJO: NO se puede calcular bajando por izq. En el caso degenerado la raiz es el
-        # id mas pequeno, su izq es None y eso devolveria 1 en vez de N.
-        # Recorrido iterativo con pila: seguro para cualquier profundidad (aqui puede ser N).
         if self.raiz is None: return 0
         max_h, pila = 0, [(self.raiz, 1)]
         while pila:
@@ -131,12 +122,6 @@ class BMas:
         while n: res.extend(n.hijos); n = n.sig
         return res
     def buscar_rango(self, lo, hi):
-        # ACA ESTA LA VENTAJA REAL DEL B+: se baja a la hoja de `lo` y se sigue el
-        # enlace `sig` de hoja en hoja. O(log_M N + R) -> R es solo lo que se devuelve.
-        # IMPORTANTE: hay que CORTAR en cuanto la hoja actual se pasa de `hi`. Sin ese
-        # break el while externo sigue saltando de hoja en hoja hasta el final del arbol
-        # y el rango se vuelve O(N), igual que una lista (el resultado sigue siendo
-        # correcto, por eso el bug no lo detectan las pruebas de correctitud).
         h = self._hoja(lo)
         i = bisect_left(h.claves, lo)
         res = []
