@@ -4,140 +4,140 @@ import os
 import math
 import matplotlib.pyplot as plt
 from typing import List, Tuple
-
-# Ensure reproducibility across runs
+ 
+# Se fija la semilla para que los resultados sean reproducibles entre ejecuciones
 random.seed(42)
-
-from QuadTree import QuadTreeNode, euclidean_distance, brute_range, brute_k_nearest
-
-Point = Tuple[float, float]
-
-def generate_points(n: int, x_max: float = 10000.0, y_max: float = 10000.0) -> List[Point]:
+ 
+from QuadTree import NodoQuadtree, distancia_euclidiana, rango_fuerza_bruta, k_mas_cercanos_fuerza_bruta
+ 
+Punto = Tuple[float, float]
+ 
+def generar_puntos(n: int, x_max: float = 10000.0, y_max: float = 10000.0) -> List[Punto]:
     return [(random.uniform(0, x_max), random.uniform(0, y_max)) for _ in range(n)]
-
-def benchmark_size(n_points: int, n_queries: int = 500, radius: float = 500.0, k: int = 5):
-    """Run benchmarks for a given dataset size.
-
-    Returns a dict with:
-        - build_time (seconds)
-        - avg_range_time (seconds)
-        - avg_range_brute_time (seconds)
-        - avg_knearest_time (seconds)
-        - avg_knearest_brute_time (seconds)
+ 
+def benchmark_tamano(n_puntos: int, n_consultas: int = 500, radio: float = 500.0, k: int = 5):
+    """Ejecuta los benchmarks para un tamaño de conjunto de datos dado.
+ 
+    Devuelve un diccionario con:
+        - tiempo_construccion (segundos)
+        - tiempo_prom_rango (segundos)
+        - tiempo_prom_rango_fb (segundos)
+        - tiempo_prom_k_cercanos (segundos)
+        - tiempo_prom_k_cercanos_fb (segundos)
     """
-    points = generate_points(n_points)
-    # ------------------- Build Quadtree -------------------
-    start = time.perf_counter()
-    root = QuadTreeNode((0.0, 10000.0, 0.0, 10000.0))
-    for p in points:
-        root.insert(p)
-    build_time = time.perf_counter() - start
-
-    # ------------------- Queries -------------------
-    range_times = []
-    range_brute_times = []
-    knearest_times = []
-    knearest_brute_times = []
-    for _ in range(n_queries):
-        # random query centre inside the same bounds
-        centre = (random.uniform(0, 10000.0), random.uniform(0, 10000.0))
-        # ---- range query ----
+    puntos = generar_puntos(n_puntos)
+    # ------------------- Construcción del Quadtree -------------------
+    inicio = time.perf_counter()
+    raiz = NodoQuadtree((0.0, 10000.0, 0.0, 10000.0))
+    for p in puntos:
+        raiz.insertar(p)
+    tiempo_construccion = time.perf_counter() - inicio
+ 
+    # ------------------- Consultas -------------------
+    tiempos_rango = []
+    tiempos_rango_fb = []
+    tiempos_k_cercanos = []
+    tiempos_k_cercanos_fb = []
+    for _ in range(n_consultas):
+        # centro de consulta aleatorio dentro de los mismos límites
+        centro = (random.uniform(0, 10000.0), random.uniform(0, 10000.0))
+        # ---- búsqueda por rango ----
         t0 = time.perf_counter()
-        _ = root.query_range(centre, radius)
-        range_times.append(time.perf_counter() - t0)
+        _ = raiz.consultar_rango(centro, radio)
+        tiempos_rango.append(time.perf_counter() - t0)
         t0 = time.perf_counter()
-        _ = brute_range(points, centre, radius)
-        range_brute_times.append(time.perf_counter() - t0)
-        # ---- k‑nearest query ----
+        _ = rango_fuerza_bruta(puntos, centro, radio)
+        tiempos_rango_fb.append(time.perf_counter() - t0)
+        # ---- búsqueda de k vecinos más cercanos ----
         t0 = time.perf_counter()
-        _ = root.k_nearest(centre, k)
-        knearest_times.append(time.perf_counter() - t0)
+        _ = raiz.k_mas_cercanos(centro, k)
+        tiempos_k_cercanos.append(time.perf_counter() - t0)
         t0 = time.perf_counter()
-        _ = brute_k_nearest(points, centre, k)
-        knearest_brute_times.append(time.perf_counter() - t0)
-
+        _ = k_mas_cercanos_fuerza_bruta(puntos, centro, k)
+        tiempos_k_cercanos_fb.append(time.perf_counter() - t0)
+ 
     return {
-        "size": n_points,
-        "build_time": build_time,
-        "avg_range_time": sum(range_times) / n_queries,
-        "avg_range_brute_time": sum(range_brute_times) / n_queries,
-        "avg_knearest_time": sum(knearest_times) / n_queries,
-        "avg_knearest_brute_time": sum(knearest_brute_times) / n_queries,
+        "tamano": n_puntos,
+        "tiempo_construccion": tiempo_construccion,
+        "tiempo_prom_rango": sum(tiempos_rango) / n_consultas,
+        "tiempo_prom_rango_fb": sum(tiempos_rango_fb) / n_consultas,
+        "tiempo_prom_k_cercanos": sum(tiempos_k_cercanos) / n_consultas,
+        "tiempo_prom_k_cercanos_fb": sum(tiempos_k_cercanos_fb) / n_consultas,
     }
-
-def run_full_benchmark():
-    # Include very small datasets to capture the true crossover point
-    sizes = [5, 10, 20, 30, 50, 75, 100, 250, 500, 1000, 2500, 5000, 10000, 20000, 50000]
-    results = []
-    for s in sizes:
-        print(f"Benchmarking size {s}...")
-        res = benchmark_size(s, n_queries=500, radius=500.0, k=5)
-        results.append(res)
-    # ------------------- Plotting -------------------
+ 
+def ejecutar_benchmark_completo():
+    # Se incluyen conjuntos muy pequeños para capturar el punto de cruce real
+    tamanos = [5, 10, 20, 30, 50, 75, 100, 250, 500, 1000, 2500, 5000, 10000, 20000, 50000]
+    resultados = []
+    for s in tamanos:
+        print(f"Evaluando tamaño {s}...")
+        res = benchmark_tamano(s, n_consultas=500, radio=500.0, k=5)
+        resultados.append(res)
+    # ------------------- Gráficas -------------------
     os.makedirs('figuras', exist_ok=True)
-    # Build time plot
+    # Gráfica del tiempo de construcción
     plt.figure(figsize=(8,5))
-    plt.plot([r['size'] for r in results], [r['build_time'] for r in results], marker='o')
+    plt.plot([r['tamano'] for r in resultados], [r['tiempo_construccion'] for r in resultados], marker='o')
     plt.xscale('log')
-    plt.xlabel('Número de puntos (log scale)')
+    plt.xlabel('Número de puntos (escala log)')
     plt.ylabel('Tiempo de construcción (s)')
     plt.title('Tiempo de construcción del Quadtree')
     plt.grid(True, which='both', ls='--', alpha=0.5)
     plt.savefig('figuras/build_time.png')
     plt.close()
-    # Range query comparison
+    # Comparación de la búsqueda por rango
     plt.figure(figsize=(8,5))
-    plt.plot([r['size'] for r in results], [r['avg_range_time'] for r in results], label='Quadtree', marker='o')
-    plt.plot([r['size'] for r in results], [r['avg_range_brute_time'] for r in results], label='Fuerza bruta', marker='x')
+    plt.plot([r['tamano'] for r in resultados], [r['tiempo_prom_rango'] for r in resultados], label='Quadtree', marker='o')
+    plt.plot([r['tamano'] for r in resultados], [r['tiempo_prom_rango_fb'] for r in resultados], label='Fuerza bruta', marker='x')
     plt.xscale('log')
     plt.yscale('log')
-    plt.xlabel('Número de puntos (log scale)')
+    plt.xlabel('Número de puntos (escala log)')
     plt.ylabel('Tiempo medio de consulta (s)')
     plt.title('Búsqueda por rango (radio = 500 m)')
     plt.legend()
     plt.grid(True, which='both', ls='--', alpha=0.5)
     plt.savefig('figuras/range_query.png')
     plt.close()
-    # k‑nearest query comparison
+    # Comparación de la búsqueda de k vecinos más cercanos
     plt.figure(figsize=(8,5))
-    plt.plot([r['size'] for r in results], [r['avg_knearest_time'] for r in results], label='Quadtree', marker='o')
-    plt.plot([r['size'] for r in results], [r['avg_knearest_brute_time'] for r in results], label='Fuerza bruta', marker='x')
+    plt.plot([r['tamano'] for r in resultados], [r['tiempo_prom_k_cercanos'] for r in resultados], label='Quadtree', marker='o')
+    plt.plot([r['tamano'] for r in resultados], [r['tiempo_prom_k_cercanos_fb'] for r in resultados], label='Fuerza bruta', marker='x')
     plt.xscale('log')
     plt.yscale('log')
-    plt.xlabel('Número de puntos (log scale)')
+    plt.xlabel('Número de puntos (escala log)')
     plt.ylabel('Tiempo medio de consulta (s)')
-    plt.title('Búsqueda de k‑vecinos más cercanos (k=5)')
+    plt.title('Búsqueda de k-vecinos más cercanos (k=5)')
     plt.legend()
     plt.grid(True, which='both', ls='--', alpha=0.5)
     plt.savefig('figuras/knearest_query.png')
     plt.close()
-    # ------------------- Textual analysis -------------------
-    analysis_path = os.path.join('analisis_resultados.txt')
-    with open(analysis_path, 'w', encoding='utf-8') as f:
-        f.write('Benchmark results (times in seconds)\n')
-        f.write('Size\tBuild\tRangeQT\tRangeBF\tKNNQT\tKNNEBF\n')
-        for r in results:
-            f.write(f"{r['size']}\t{r['build_time']:.6f}\t{r['avg_range_time']:.6f}\t{r['avg_range_brute_time']:.6f}\t{r['avg_knearest_time']:.6f}\t{r['avg_knearest_brute_time']:.6f}\n")
+    # ------------------- Análisis textual -------------------
+    ruta_analisis = os.path.join('analisis_resultados.txt')
+    with open(ruta_analisis, 'w', encoding='utf-8') as f:
+        f.write('Resultados del benchmark (tiempos en segundos)\n')
+        f.write('Tamaño\tConstrucción\tRangoQT\tRangoFB\tKNNQT\tKNNFB\n')
+        for r in resultados:
+            f.write(f"{r['tamano']}\t{r['tiempo_construccion']:.6f}\t{r['tiempo_prom_rango']:.6f}\t{r['tiempo_prom_rango_fb']:.6f}\t{r['tiempo_prom_k_cercanos']:.6f}\t{r['tiempo_prom_k_cercanos_fb']:.6f}\n")
         f.write('\n')
-        # Find crossover points where Quadtree becomes faster than brute for each query type
-        def find_cross(res_list, qt_key, bf_key):
-            prev = None
-            for r in res_list:
-                if prev is not None:
-                    # Look for transition from slower (qt > bf) to faster (qt < bf)
-                    if prev[qt_key] > prev[bf_key] and r[qt_key] < r[bf_key]:
-                        # Return the interval where crossing occurs
-                        return f"between {prev['size']} and {r['size']}"
-                prev = r
-            # If never slower, report that Quadtree is always faster
-            if all(r[qt_key] < r[bf_key] for r in res_list):
+        # Se busca el punto de cruce donde el Quadtree pasa a ser más rápido que la fuerza bruta en cada tipo de consulta
+        def encontrar_cruce(lista_res, clave_qt, clave_fb):
+            anterior = None
+            for r in lista_res:
+                if anterior is not None:
+                    # Se busca la transición de más lento (qt > fb) a más rápido (qt < fb)
+                    if anterior[clave_qt] > anterior[clave_fb] and r[clave_qt] < r[clave_fb]:
+                        # Se devuelve el intervalo donde ocurre el cruce
+                        return f"entre {anterior['tamano']} y {r['tamano']}"
+                anterior = r
+            # Si nunca fue más lento, se reporta que el Quadtree siempre es más rápido
+            if all(r[clave_qt] < r[clave_fb] for r in lista_res):
                 return "Quadtree siempre es más rápido"
             return "No se encontró cruce dentro de los tamaños probados"
-        range_cross = find_cross(results, 'avg_range_time', 'avg_range_brute_time')
-        knn_cross = find_cross(results, 'avg_knearest_time', 'avg_knearest_brute_time')
-        f.write(f'Range query crossover size (Quadtree faster): {range_cross}\n')
-        f.write(f'k‑nearest query crossover size (Quadtree faster): {knn_cross}\n')
+        cruce_rango = encontrar_cruce(resultados, 'tiempo_prom_rango', 'tiempo_prom_rango_fb')
+        cruce_knn = encontrar_cruce(resultados, 'tiempo_prom_k_cercanos', 'tiempo_prom_k_cercanos_fb')
+        f.write(f'Tamaño de cruce en búsqueda por rango (Quadtree más rápido): {cruce_rango}\n')
+        f.write(f'Tamaño de cruce en búsqueda de k-vecinos más cercanos (Quadtree más rápido): {cruce_knn}\n')
     print('Benchmark completado. Figuras en ./figuras y resultados en analisis_resultados.txt')
-
+ 
 if __name__ == '__main__':
-    run_full_benchmark()
+    ejecutar_benchmark_completo()

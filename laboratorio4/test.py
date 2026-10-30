@@ -4,120 +4,118 @@ import math
 import os
 import matplotlib.pyplot as plt
 from typing import List, Tuple
-
-# Ensure reproducibility
+ 
 random.seed(42)
-
-# Import the Quadtree implementation
-from QuadTree import QuadTreeNode, euclidean_distance, brute_range, brute_k_nearest, sorted_by_distance
-
-Point = Tuple[float, float]
-
-def generate_points(n: int, x_max: float = 10000.0, y_max: float = 10000.0) -> List[Point]:
-    """Generate *n* random points inside the rectangle [0, x_max] x [0, y_max]."""
+ 
+from QuadTree import NodoQuadtree, distancia_euclidiana, rango_fuerza_bruta, k_mas_cercanos_fuerza_bruta, ordenar_por_distancia
+ 
+Punto = Tuple[float, float]
+ 
+def generar_puntos(n: int, x_max: float = 10000.0, y_max: float = 10000.0) -> List[Punto]:
+    """Genera *n* puntos aleatorios dentro del rectángulo [0, x_max] x [0, y_max]."""
     return [(random.uniform(0, x_max), random.uniform(0, y_max)) for _ in range(n)]
-
-class TestQuadTree(unittest.TestCase):
+ 
+class TestQuadtree(unittest.TestCase):
     def setUp(self):
-        # Small dataset for basic correctness tests
-        self.points = generate_points(200)
-        self.root = QuadTreeNode((0.0, 10000.0, 0.0, 10000.0))
-        for p in self.points:
-            inserted = self.root.insert(p)
-            self.assertTrue(inserted, f"Point {p} should be inside root bounds")
-
-    def test_range_query_correctness(self):
-        center = (5000.0, 5000.0)
-        radius = 1500.0
-        qt_result = self.root.query_range(center, radius)
-        brute_result = brute_range(self.points, center, radius)
-        # Compare as unordered collections
-        self.assertCountEqual(qt_result, brute_result)
-        # Also test ordering helper
-        ordered_qt = sorted_by_distance(qt_result, center)
-        ordered_brute = sorted_by_distance(brute_result, center)
-        self.assertEqual(ordered_qt, ordered_brute)
-
-    def test_k_nearest_correctness(self):
-        target = (4000.0, 3000.0)
+        # Conjunto pequeño de datos para las pruebas básicas de correctitud
+        self.puntos = generar_puntos(200)
+        self.raiz = NodoQuadtree((0.0, 10000.0, 0.0, 10000.0))
+        for p in self.puntos:
+            insertado = self.raiz.insertar(p)
+            self.assertTrue(insertado, f"El punto {p} debería estar dentro de los límites de la raíz")
+ 
+    def test_consulta_rango_correcta(self):
+        centro = (5000.0, 5000.0)
+        radio = 1500.0
+        resultado_qt = self.raiz.consultar_rango(centro, radio)
+        resultado_fb = rango_fuerza_bruta(self.puntos, centro, radio)
+        # Se comparan como colecciones sin orden
+        self.assertCountEqual(resultado_qt, resultado_fb)
+        # También se prueba la función auxiliar de ordenamiento
+        ordenado_qt = ordenar_por_distancia(resultado_qt, centro)
+        ordenado_fb = ordenar_por_distancia(resultado_fb, centro)
+        self.assertEqual(ordenado_qt, ordenado_fb)
+ 
+    def test_k_cercanos_correcto(self):
+        objetivo = (4000.0, 3000.0)
         k = 5
-        qt_knn = self.root.k_nearest(target, k)
-        brute_knn = brute_k_nearest(self.points, target, k)
-        self.assertEqual(qt_knn, brute_knn)
-
-    def test_nearest_single(self):
-        target = (8000.0, 2000.0)
-        nn = self.root.nearest(target)
-        brute_nn = brute_k_nearest(self.points, target, 1)[0]
-        self.assertEqual(nn, brute_nn)
-
-    def test_max_depth_prevents_infinite_subdivision(self):
-        # Create many points with identical coordinates to force deep subdivision
-        identical_point = (5000.0, 5000.0)
-        root = QuadTreeNode((0.0, 10000.0, 0.0, 10000.0))
+        knn_qt = self.raiz.k_mas_cercanos(objetivo, k)
+        knn_fb = k_mas_cercanos_fuerza_bruta(self.puntos, objetivo, k)
+        self.assertEqual(knn_qt, knn_fb)
+ 
+    def test_cercano_unico(self):
+        objetivo = (8000.0, 2000.0)
+        vecino = self.raiz.mas_cercano(objetivo)
+        vecino_fb = k_mas_cercanos_fuerza_bruta(self.puntos, objetivo, 1)[0]
+        self.assertEqual(vecino, vecino_fb)
+ 
+    def test_profundidad_maxima_evita_subdivision_infinita(self):
+        # Se crean muchos puntos con coordenadas idénticas para forzar una subdivisión profunda
+        punto_identico = (5000.0, 5000.0)
+        raiz = NodoQuadtree((0.0, 10000.0, 0.0, 10000.0))
         for _ in range(50):
-            root.insert(identical_point)
-        # The tree should not exceed MAX_DEPTH
-        def max_depth(node):
-            if node.children is None:
-                return node.depth
-            return max(max_depth(c) for c in node.children)
-        depth = max_depth(root)
-        self.assertLessEqual(depth, QuadTreeNode.MAX_DEPTH)
-
-    def test_insert_out_of_bounds(self):
-        # Create a root with defined bounds
-        root = QuadTreeNode((0.0, 10000.0, 0.0, 10000.0))
-        # Point outside the bounds should not be inserted
-        outside_point = (15000.0, -500.0)
-        inserted = root.insert(outside_point)
-        self.assertFalse(inserted, "Insert should return False for points outside the root bounds")
-        # Tree should remain empty
-        self.assertEqual(root.points, [], "Root should have no points after failed insert")
-
-    def test_range_zero_radius(self):
-        # Use the existing set of points from setUp
-        centre = self.points[0]  # pick a known point
-        # radius 0 should return only points that exactly match the centre
-        result = self.root.query_range(centre, 0.0)
-        # The result may contain the centre point (if it was inserted)
-        self.assertTrue(all(p == centre for p in result), "Zero‑radius range should return only exact matches")
-        # Verify that brute‑force behaves the same
-        brute_res = brute_range(self.points, centre, 0.0)
-        self.assertCountEqual(result, brute_res)
-
-    def test_empty_tree_queries(self):
-        empty_root = QuadTreeNode((0.0, 10000.0, 0.0, 10000.0))
-        centre = (5000.0, 5000.0)
-        # Range query on empty tree returns empty list
-        self.assertEqual(empty_root.query_range(centre, 500.0), [], "Empty tree range query should return []")
-        # Nearest neighbor on empty tree returns None
-        self.assertIsNone(empty_root.nearest(centre), "Nearest on empty tree should be None")
-        # k‑nearest on empty tree returns empty list
-        self.assertEqual(empty_root.k_nearest(centre, 3), [], "k‑nearest on empty tree should return []")
-    
-    def test_visualization(self):
-        # Simple visual sanity check – generate a figure and ensure it saves without error
+            raiz.insertar(punto_identico)
+        # El árbol no debe superar PROFUNDIDAD_MAXIMA
+        def profundidad_maxima(nodo):
+            if nodo.hijos is None:
+                return nodo.profundidad
+            return max(profundidad_maxima(h) for h in nodo.hijos)
+        profundidad = profundidad_maxima(raiz)
+        self.assertLessEqual(profundidad, NodoQuadtree.PROFUNDIDAD_MAXIMA)
+ 
+    def test_insertar_fuera_de_limites(self):
+        # Se crea una raíz con límites definidos
+        raiz = NodoQuadtree((0.0, 10000.0, 0.0, 10000.0))
+        # Un punto fuera de los límites no debe insertarse
+        punto_fuera = (15000.0, -500.0)
+        insertado = raiz.insertar(punto_fuera)
+        self.assertFalse(insertado, "insertar debe devolver False para puntos fuera de los límites de la raíz")
+        # El árbol debe seguir vacío
+        self.assertEqual(raiz.puntos, [], "La raíz no debe tener puntos después de una inserción fallida")
+ 
+    def test_rango_radio_cero(self):
+        # Se usa el conjunto de puntos que ya existe desde setUp
+        centro = self.puntos[0]  # se toma un punto conocido
+        # un radio 0 solo debe devolver los puntos que coinciden exactamente con el centro
+        resultado = self.raiz.consultar_rango(centro, 0.0)
+        # El resultado puede contener el punto del centro (si fue insertado)
+        self.assertTrue(all(p == centro for p in resultado), "Un rango de radio cero solo debe devolver coincidencias exactas")
+        # Se verifica que la fuerza bruta se comporte igual
+        resultado_fb = rango_fuerza_bruta(self.puntos, centro, 0.0)
+        self.assertCountEqual(resultado, resultado_fb)
+ 
+    def test_consultas_arbol_vacio(self):
+        raiz_vacia = NodoQuadtree((0.0, 10000.0, 0.0, 10000.0))
+        centro = (5000.0, 5000.0)
+        # La búsqueda por rango en un árbol vacío devuelve una lista vacía
+        self.assertEqual(raiz_vacia.consultar_rango(centro, 500.0), [], "La búsqueda por rango en un árbol vacío debe devolver []")
+        # El vecino más cercano en un árbol vacío devuelve None
+        self.assertIsNone(raiz_vacia.mas_cercano(centro), "El más cercano en un árbol vacío debe ser None")
+        # Los k vecinos más cercanos en un árbol vacío devuelven una lista vacía
+        self.assertEqual(raiz_vacia.k_mas_cercanos(centro, 3), [], "Los k más cercanos en un árbol vacío deben ser []")
+ 
+    def test_visualizacion(self):
+        # Verificación visual sencilla: se genera una figura y se comprueba que se guarda sin errores
         plt.figure(figsize=(6,6))
-        # Plot points
-        xs, ys = zip(*self.points)
-        plt.scatter(xs, ys, s=10, c='blue', label='Points')
-        # Plot node boundaries recursively
-        def draw_bounds(node):
-            xmin, xmax, ymin, ymax = node.bounds
-            plt.plot([xmin, xmax, xmax, xmin, xmin], [ymin, ymin, ymax, ymax, ymin], 'k-')
-            if node.children:
-                for child in node.children:
-                    draw_bounds(child)
-        draw_bounds(self.root)
-        plt.title('QuadTree bounds and points')
+        # Se grafican los puntos
+        xs, ys = zip(*self.puntos)
+        plt.scatter(xs, ys, s=10, c='blue', label='Puntos')
+        # Se grafican recursivamente los límites de cada nodo
+        def dibujar_limites(nodo):
+            x_min, x_max, y_min, y_max = nodo.limites
+            plt.plot([x_min, x_max, x_max, x_min, x_min], [y_min, y_min, y_max, y_max, y_min], 'k-')
+            if nodo.hijos:
+                for hijo in nodo.hijos:
+                    dibujar_limites(hijo)
+        dibujar_limites(self.raiz)
+        plt.title('Límites del Quadtree y puntos')
         plt.legend()
         os.makedirs('figuras', exist_ok=True)
-        out_path = os.path.join(os.getcwd(), 'figuras', 'visualization_test.png')
-        plt.savefig(out_path)
+        ruta_salida = os.path.join(os.getcwd(), 'figuras', 'visualization_test.png')
+        plt.savefig(ruta_salida)
         plt.close()
-        self.assertTrue(os.path.exists(out_path))
-        # Keep the generated figure for repository inclusion
-
+        self.assertTrue(os.path.exists(ruta_salida))
+        # Se conserva la figura generada para incluirla en el repositorio
+ 
 if __name__ == '__main__':
     unittest.main()
